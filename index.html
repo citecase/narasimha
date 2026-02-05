@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri Lakshmi Narasimha Devasthan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --brand-primary: #991b1b;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Reverted Deep Red Header Pattern */
+        .hero-red {
+            background-color: #7f1d1d;
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 20px 20px;
+        }
+
+        .list-item {
+            transition: all 0.2s ease;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            transition: opacity 0.3s ease;
+        }
+
+        /* Fixed Booking Button Style */
+        .book-fab {
+            box-shadow: 0 10px 25px -5px rgba(153, 27, 27, 0.4);
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 640px) {
+            .hero-title { font-size: 1.5rem !important; line-height: 1.3; }
+            .sticky-header { top: 0 !important; border-radius: 0 !important; border-left: none; border-right: none; margin-left: -1rem; margin-right: -1rem; width: calc(100% + 2rem); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header Section -->
+    <header class="hero-red text-white pt-10 pb-12 px-6 relative overflow-hidden text-center shadow-md">
+        <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <i class="fas fa-om text-9xl"></i>
+        </div>
+        <div class="max-w-3xl mx-auto relative z-10">
+            <h1 class="hero-title text-2xl md:text-3xl font-extrabold tracking-tight">
+                Sri Lakshmi Narasimha Devasthan
+            </h1>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto px-4 flex-grow w-full pb-32">
+        
+        <!-- Search Bar -->
+        <div class="bg-white sticky-header shadow-sm border-b border-gray-100 p-3 mb-2 sticky top-0 z-30">
+            <div class="relative w-full group">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <i class="fas fa-search text-xs"></i>
+                </span>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search events or dates..." 
+                    class="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-700/10 focus:border-red-700 transition-all text-gray-700 text-sm md:text-base"
+                >
+                <button id="clearSearch" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 hidden">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-end px-2 mb-4">
+            <span id="eventCount" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Syncing Registry...</span>
+        </div>
+
+        <!-- Skeleton Loading -->
+        <div id="loadingGrid" class="space-y-4">
+            <div class="h-16 bg-gray-50 rounded-xl animate-pulse"></div>
+            <div class="h-16 bg-gray-50 rounded-xl animate-pulse"></div>
+        </div>
+
+        <!-- Event List (Information only) -->
+        <div id="eventGrid" class="divide-y divide-gray-50 hidden"></div>
+
+        <!-- Empty/Error States -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-center">
+            <i class="far fa-calendar-times text-gray-200 text-5xl mb-4"></i>
+            <h3 class="text-lg font-bold text-gray-400">No events found</h3>
+        </div>
+
+        <div id="errorState" class="hidden max-w-sm mx-auto bg-white p-8 text-center border border-red-50 rounded-2xl">
+            <i class="fas fa-wifi text-red-100 text-4xl mb-4"></i>
+            <h2 class="text-sm font-bold text-gray-400 mb-6">Connection Failed</h2>
+            <button onclick="location.reload()" class="text-red-700 font-bold text-xs uppercase tracking-widest underline">Retry</button>
+        </div>
+    </main>
+
+    <!-- Fixed Booking CTA -->
+    <div class="fixed bottom-6 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
+        <button onclick="openBooking()" class="pointer-events-auto book-fab bg-red-800 text-white px-8 py-4 rounded-2xl font-bold flex items-center space-x-3 active:scale-95 transition-transform shadow-2xl">
+            <i class="fas fa-tasks"></i>
+            <span>Manage Bookings</span>
+        </button>
+    </div>
+
+    <!-- Booking Modal (Tally Embed) -->
+    <div id="bookingModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 modal-overlay">
+        <div class="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden relative flex flex-col h-[85vh] sm:h-auto sm:min-h-[600px]">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wide">Booking Management</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Sri Lakshmi Narasimha Devasthan</p>
+                </div>
+                <button onclick="closeBooking()" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:text-red-700 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="flex-grow overflow-y-auto bg-white p-2">
+                <iframe 
+                    id="tallyIframe"
+                    data-tally-src="https://tally.so/embed/VLJWyN?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
+                    loading="lazy" 
+                    width="100%" 
+                    height="500" 
+                    frameborder="0" 
+                    marginheight="0" 
+                    marginwidth="0" 
+                    title="Lakshmi Narasimha Prasad Booking App"
+                ></iframe>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-50 border-t border-gray-100 py-10">
+        <div class="max-w-2xl mx-auto px-6 text-center">
+            <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">© 2025 Sri Lakshmi Narasimha Devasthan</p>
+        </div>
+    </footer>
+
+    <!-- Tally Script Initialization -->
+    <script src="https://tally.so/widgets/embed.js"></script>
+
+    <script>
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vQRkmuCc2IOP94Iy3nYVMN4_aaJF_uMyXTSkl6LenhcioG4yyqNG8EL9dJrq0y00xrxW3baPrvwNsJ9/pub?output=csv`;
+        
+        let allEvents = [];
+
+        const ui = {
+            grid: document.getElementById('eventGrid'),
+            loader: document.getElementById('loadingGrid'),
+            error: document.getElementById('errorState'),
+            search: document.getElementById('searchInput'),
+            clearSearch: document.getElementById('clearSearch'),
+            count: document.getElementById('eventCount'),
+            empty: document.getElementById('emptyState'),
+            modal: document.getElementById('bookingModal'),
+            iframe: document.getElementById('tallyIframe')
+        };
+
+        function parseCSV(text) {
+            const rows = [];
+            let row = [];
+            let col = "";
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"' && inQuotes && text[i+1] === '"') { col += '"'; i++; }
+                else if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { row.push(col.trim()); col = ""; }
+                else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (col !== "" || row.length > 0) { row.push(col.trim()); rows.push(row); }
+                    row = []; col = "";
+                    if (char === '\r' && text[i+1] === '\n') i++;
+                } else col += char;
+            }
+            if (col !== "" || row.length > 0) { row.push(col.trim()); rows.push(row); }
+            return rows;
+        }
+
+        function parseDate(str) {
+            if (!str) return null;
+            const parts = str.split(/[./-]/);
+            if (parts.length === 3) {
+                let d, m, y;
+                if (parts[0].length === 4) { y = parseInt(parts[0]); m = parseInt(parts[1]); d = parseInt(parts[2]); }
+                else { d = parseInt(parts[0]); m = parseInt(parts[1]); y = parseInt(parts[2]); }
+                const date = new Date(y, m - 1, d);
+                date.setHours(0,0,0,0);
+                return isNaN(date.getTime()) ? null : date;
+            }
+            return null;
+        }
+
+        async function fetchEvents() {
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                const rawText = await response.text();
+                const rows = parseCSV(rawText);
+                
+                if (rows.length < 2) throw new Error("No data found.");
+
+                const now = new Date();
+                now.setHours(0,0,0,0);
+
+                allEvents = rows.slice(1)
+                    .map((row, idx) => {
+                        const dateObj = parseDate(row[3]);
+                        const searchableDate = dateObj ? dateObj.toLocaleDateString('en-IN', {
+                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                        }).toLowerCase() : "";
+
+                        return {
+                            id: idx,
+                            dateObj: dateObj,
+                            rawDate: row[3],
+                            searchableDate: searchableDate,
+                            title: row[4] || 'Scheduled Event'
+                        };
+                    })
+                    .filter(ev => ev.dateObj && ev.dateObj >= now)
+                    .sort((a, b) => a.dateObj - b.dateObj);
+
+                render(allEvents);
+                ui.loader.classList.add('hidden');
+                ui.grid.classList.remove('hidden');
+            } catch (err) {
+                ui.loader.classList.add('hidden');
+                ui.error.classList.remove('hidden');
+            }
+        }
+
+        function render(events) {
+            ui.grid.innerHTML = '';
+            ui.count.textContent = `${events.length} EVENTS RECORDED`;
+
+            if (events.length === 0) {
+                ui.empty.classList.remove('hidden');
+                return;
+            }
+
+            ui.empty.classList.add('hidden');
+
+            events.forEach(event => {
+                const item = document.createElement('div');
+                item.className = 'list-item py-6 px-3 flex items-center justify-between border-b border-gray-50 last:border-0';
+                
+                const dateDisplay = event.dateObj.toLocaleDateString('en-IN', {
+                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+                });
+
+                item.innerHTML = `
+                    <div class="flex flex-col pr-4">
+                        <h3 class="text-sm md:text-base font-bold text-gray-800 leading-tight">
+                            ${event.title}
+                        </h3>
+                        <div class="flex items-center text-[11px] font-bold text-gray-400 mt-2 uppercase tracking-tight">
+                            <i class="far fa-calendar-alt mr-1.5 text-red-700/40"></i> ${dateDisplay}
+                        </div>
+                    </div>
+                `;
+                ui.grid.appendChild(item);
+            });
+        }
+
+        function openBooking() {
+            ui.modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; 
+            
+            if (!ui.iframe.src) {
+                ui.iframe.src = ui.iframe.dataset.tallySrc;
+            }
+
+            if (typeof Tally !== "undefined") {
+                Tally.loadEmbeds();
+            }
+        }
+
+        function closeBooking() {
+            ui.modal.classList.add('hidden');
+            document.body.style.overflow = ''; 
+        }
+
+        ui.modal.addEventListener('click', (e) => {
+            if (e.target === ui.modal) closeBooking();
+        });
+
+        ui.search.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase().trim();
+            ui.clearSearch.classList.toggle('hidden', val.length === 0);
+            const filtered = allEvents.filter(ev => 
+                ev.title.toLowerCase().includes(val) || 
+                ev.rawDate.includes(val) ||
+                ev.searchableDate.includes(val)
+            );
+            render(filtered);
+        });
+
+        ui.clearSearch.addEventListener('click', () => {
+            ui.search.value = '';
+            ui.clearSearch.classList.add('hidden');
+            render(allEvents);
+        });
+
+        window.onload = fetchEvents;
+    </script>
+</body>
+</html>
